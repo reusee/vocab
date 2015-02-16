@@ -77,10 +77,14 @@ func main() {
 		Time time.Time
 		What string
 	}
+	type Practice struct {
+		Type string
+		Word Word
+	}
 	data := struct {
-		History map[string][]HistoryEntry
+		History map[Practice][]HistoryEntry
 	}{
-		History: make(map[string][]HistoryEntry),
+		History: make(map[Practice][]HistoryEntry),
 	}
 	dataFile, err := gobfile.New(&data, dataFilePath, gobfile.NewFileLocker(dataFileLockPath))
 	checkErr("open data file", err)
@@ -89,17 +93,23 @@ func main() {
 
 	// check new entry
 	for _, word := range words {
-		if _, ok := data.History[word.Text]; !ok {
-			pt("found new word entry: %s\n", word.Text)
-			data.History[word.Text] = append(data.History[word.Text], HistoryEntry{
-				Time: time.Now(),
-				What: "new",
-			})
+		for _, t := range []string{"audio", "text", "usage"} {
+			practice := Practice{
+				Type: t,
+				Word: word,
+			}
+			if _, ok := data.History[practice]; !ok {
+				pt("new practice: %s %s\n", t, word.Text)
+				data.History[practice] = append(data.History[practice], HistoryEntry{
+					Time: time.Now(),
+					What: "ok",
+				})
+			}
 		}
 	}
+	dataFile.Save()
 
-	// review
-	type Reviewer func(Word) bool
+	// review functions
 	audioReview := func(word Word) bool {
 		var reply string
 		retry := 1
@@ -148,38 +158,45 @@ func main() {
 		return false
 	}
 
-	type LevelSpec struct {
-		What     string
-		Duration time.Duration
-		Reviewer Reviewer
+	reviewFuncs := map[string]func(Word) bool{
+		"audio": audioReview,
+		"text":  textReview,
+		"usage": usageReview,
 	}
-	levels := []LevelSpec{
-		{"new", time.Hour, audioReview},
-		{"a1", time.Hour, textReview},
-		{"a2", time.Hour, usageReview},
-		{"a3", time.Hour * 24 * 3, audioReview},
-	}
-	for _, word := range words {
-		history := data.History[word.Text]
-		lastHistory := history[len(history)-1]
-		index := 0
-		for lastHistory.What != levels[index].What {
-			index++
-		}
-		if time.Now().Sub(lastHistory.Time) > levels[index].Duration {
-			ok := levels[index].Reviewer(word)
-			var what string
-			if ok {
-				what = levels[index+1].What
-			} else {
-				what = levels[index].What
+
+	for practice, history := range data.History {
+		// calculate fade and max
+		last := history[len(history)-1]
+		fade := time.Now().Sub(last.Time)
+		var max time.Duration
+		for i := 1; i < len(history); i++ {
+			if history[i].What != "ok" {
+				continue
 			}
-			_ = what
-			data.History[word.Text] = append(data.History[word.Text], HistoryEntry{
-				What: what,
-				Time: time.Now(),
-			})
+			if d := history[i].Time.Sub(history[i-1].Time); d > max {
+				max = d
+			}
 		}
+		// filter
+		if practice.Type == "text" || practice.Type == "usage" { //TODO
+			continue
+		}
+		if fade < max {
+			continue
+		}
+		pt("practice %s fade %v max %v\n", practice.Type, fade, max)
+		// practice
+		var what string
+		if reviewFuncs[practice.Type](practice.Word) {
+			what = "ok"
+		} else {
+			what = "fail"
+		}
+		data.History[practice] = append(data.History[practice], HistoryEntry{
+			What: what,
+			Time: time.Now(),
+		})
+		dataFile.Save()
 	}
 }
 
