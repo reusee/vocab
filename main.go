@@ -184,6 +184,9 @@ func main() {
 		if fade < max {
 			continue
 		}
+		if fade < time.Minute*30 {
+			continue
+		}
 		pt("practice %s fade %v max %v\n", practice.Type, fade, max)
 		// practice
 		var what string
