@@ -40,7 +40,7 @@ func main() {
 		Text string
 		Desc string
 	}
-	words := []Word{}
+	words := map[string]Word{}
 	content, err := ioutil.ReadFile(filepath.Join(dir, "words"))
 	checkErr("read words file", err)
 	for _, line := range strings.Split(string(content), "\n") {
@@ -60,14 +60,10 @@ func main() {
 		if len(text) == 0 || len(desc) == 0 {
 			log.Fatalf("invalid word entry %s\n", line)
 		}
-		words = append(words, Word{
+		words[text] = Word{
 			Text: text,
 			Desc: desc,
-		})
-	}
-	for i := len(words) - 1; i >= 1; i-- {
-		j := rand.Intn(i + 1)
-		words[i], words[j] = words[j], words[i]
+		}
 	}
 
 	// data file
@@ -79,7 +75,7 @@ func main() {
 	}
 	type Practice struct {
 		Type string
-		Word Word
+		Text string
 	}
 	data := struct {
 		History map[Practice][]HistoryEntry
@@ -96,7 +92,7 @@ func main() {
 		for _, t := range []string{"audio", "text", "usage"} {
 			practice := Practice{
 				Type: t,
-				Word: word,
+				Text: word.Text,
 			}
 			if _, ok := data.History[practice]; !ok {
 				pt("new practice: %s %s\n", t, word.Text)
@@ -188,7 +184,7 @@ func main() {
 		"usage": usageReview,
 	}
 
-	practicedWords := map[Word]struct{}{}
+	practicedWords := map[string]struct{}{}
 	for practice, history := range data.History {
 		// calculate fade and max
 		last := history[len(history)-1]
@@ -212,14 +208,14 @@ func main() {
 		if fade < time.Minute*30 {
 			continue
 		}
-		if _, ok := practicedWords[practice.Word]; ok {
+		if _, ok := practicedWords[practice.Text]; ok {
 			continue
 		}
 		pt("practice %s fade %v max %v\n", practice.Type, fade, max)
 		// practice
-		practicedWords[practice.Word] = struct{}{}
+		practicedWords[practice.Text] = struct{}{}
 		var what string
-		if reviewFuncs[practice.Type](practice.Word) {
+		if reviewFuncs[practice.Type](words[practice.Text]) {
 			what = "ok"
 		} else {
 			what = "fail"
