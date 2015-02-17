@@ -227,15 +227,15 @@ func main() {
 		if fade < max {
 			continue
 		}
-		if fade < time.Second*30 {
+		if fade < time.Second*30 { // skip newly added
 			continue
 		}
 		if _, ok := practicedWords[practice.Text]; ok {
 			continue
 		}
+		practicedWords[practice.Text] = struct{}{}
 		pt("practice %s fade %v max %v\n", practice.Type, fade, max)
 		// practice
-		practicedWords[practice.Text] = struct{}{}
 		var what string
 		if reviewFuncs[practice.Type](words[practice.Text]) {
 			what = "ok"
