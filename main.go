@@ -149,7 +149,31 @@ func main() {
 	}
 
 	textReview := func(word Word) bool {
-		panic("TODO")
+		pt("showing text\n")
+		pt("%s\n", word.Text)
+	ask2:
+		pt("'j' to play audio\n")
+		var reply string
+		fmt.Scanf("%s\n", &reply)
+		switch reply {
+		case "j":
+			pt("playing audio\n")
+			err := exec.Command("mpv", filepath.Join(dir, fmt.Sprintf("%s.mp3", word.Text))).Run()
+			checkErr("play audio", err)
+		ask:
+			pt("'y' to level up, 'n' to keep\n")
+			fmt.Scanf("%s\n", &reply)
+			switch reply {
+			case "y":
+				return true
+			case "n":
+				return false
+			default:
+				goto ask
+			}
+		default:
+			goto ask2
+		}
 		return false
 	}
 
@@ -164,6 +188,7 @@ func main() {
 		"usage": usageReview,
 	}
 
+	practicedWords := map[Word]struct{}{}
 	for practice, history := range data.History {
 		// calculate fade and max
 		last := history[len(history)-1]
@@ -178,7 +203,7 @@ func main() {
 			}
 		}
 		// filter
-		if practice.Type == "text" || practice.Type == "usage" { //TODO
+		if practice.Type == "usage" { //TODO
 			continue
 		}
 		if fade < max {
@@ -187,8 +212,12 @@ func main() {
 		if fade < time.Minute*30 {
 			continue
 		}
+		if _, ok := practicedWords[practice.Word]; ok {
+			continue
+		}
 		pt("practice %s fade %v max %v\n", practice.Type, fade, max)
 		// practice
+		practicedWords[practice.Word] = struct{}{}
 		var what string
 		if reviewFuncs[practice.Type](practice.Word) {
 			what = "ok"
