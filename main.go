@@ -10,6 +10,8 @@ import (
 	"math/rand"
 	"os/exec"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -209,6 +211,12 @@ func main() {
 		"usage": usageReview,
 	}
 
+	type PracticeInfo struct {
+		Practice Practice
+		Max      time.Duration
+		Fade     time.Duration
+	}
+	practices := []PracticeInfo{}
 	practicedWords := map[string]struct{}{}
 	for practice, history := range data.History {
 		// calculate fade and max
@@ -234,15 +242,30 @@ func main() {
 			continue
 		}
 		practicedWords[practice.Text] = struct{}{}
-		pt("practice %s fade %v max %v\n", practice.Type, fade, max)
-		// practice
+		// collect
+		practices = append(practices, PracticeInfo{
+			Practice: practice,
+			Fade:     fade,
+			Max:      max,
+		})
+	}
+	pt("%d practices\n", len(practices))
+
+	// sort
+	Sort(practices, func(left, right PracticeInfo) bool {
+		return left.Fade > right.Fade
+	})
+
+	// practice
+	for _, practice := range practices {
+		pt("practice %s fade %v max %v\n", practice.Practice.Type, practice.Fade, practice.Max)
 		var what string
-		if reviewFuncs[practice.Type](words[practice.Text]) {
+		if reviewFuncs[practice.Practice.Type](words[practice.Practice.Text]) {
 			what = "ok"
 		} else {
 			what = "fail"
 		}
-		data.History[practice] = append(data.History[practice], HistoryEntry{
+		data.History[practice.Practice] = append(data.History[practice.Practice], HistoryEntry{
 			What: what,
 			Time: time.Now(),
 		})
@@ -254,4 +277,29 @@ func checkErr(desc string, err error) {
 	if err != nil {
 		log.Fatalf("%s error %v", desc, err)
 	}
+}
+
+func Sort(slice interface{}, cmp interface{}) {
+	sort.Sort(sliceSorter{reflect.ValueOf(slice), reflect.ValueOf(cmp)})
+}
+
+type sliceSorter struct {
+	slice, cmp reflect.Value
+}
+
+func (t sliceSorter) Len() int {
+	return t.slice.Len()
+}
+
+func (t sliceSorter) Less(i, j int) bool {
+	return t.cmp.Call([]reflect.Value{
+		t.slice.Index(i),
+		t.slice.Index(j),
+	})[0].Bool()
+}
+
+func (t sliceSorter) Swap(i, j int) {
+	tmp := t.slice.Index(i).Interface()
+	t.slice.Index(i).Set(t.slice.Index(j))
+	t.slice.Index(j).Set(reflect.ValueOf(tmp))
 }
