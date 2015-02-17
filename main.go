@@ -174,7 +174,32 @@ func main() {
 	}
 
 	usageReview := func(word Word) bool {
-		panic("TODO")
+		pt("showing usage\n")
+		pt("%s\n", word.Desc)
+	ask:
+		pt("'j' to show answer\n")
+		var reply string
+		fmt.Scanf("%s\n", &reply)
+		switch reply {
+		case "j":
+			pt("playing audio\n")
+			err := exec.Command("mpv", filepath.Join(dir, fmt.Sprintf("%s.mp3", word.Text))).Run()
+			checkErr("play audio", err)
+			pt("%s\n", word.Text)
+		ask2:
+			pt("'y' to level up, 'n' to keep\n")
+			fmt.Scanf("%s\n", &reply)
+			switch reply {
+			case "y":
+				return true
+			case "n":
+				return false
+			default:
+				goto ask2
+			}
+		default:
+			goto ask
+		}
 		return false
 	}
 
@@ -199,13 +224,10 @@ func main() {
 			}
 		}
 		// filter
-		if practice.Type == "usage" { //TODO
-			continue
-		}
 		if fade < max {
 			continue
 		}
-		if fade < time.Minute*30 {
+		if fade < time.Second*30 {
 			continue
 		}
 		if _, ok := practicedWords[practice.Text]; ok {
