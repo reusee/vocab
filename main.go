@@ -215,6 +215,7 @@ func main() {
 		Practice Practice
 		Max      time.Duration
 		Fade     time.Duration
+		Ratio    float64
 	}
 	practices := []PracticeInfo{}
 	practicedWords := map[string]struct{}{}
@@ -231,6 +232,7 @@ func main() {
 				max = d
 			}
 		}
+		ratio := float64(fade) / float64(max+1)
 		// filter
 		if fade < max {
 			continue
@@ -247,18 +249,20 @@ func main() {
 			Practice: practice,
 			Fade:     fade,
 			Max:      max,
+			Ratio:    ratio,
 		})
 	}
 	pt("%d practices\n", len(practices))
 
 	// sort
 	Sort(practices, func(left, right PracticeInfo) bool {
-		return left.Fade > right.Fade
+		return left.Ratio > right.Ratio
+		//return left.Fade > right.Fade
 	})
 
 	// practice
 	for _, practice := range practices {
-		pt("practice %s fade %v max %v\n", practice.Practice.Type, practice.Fade, practice.Max)
+		pt("practice %s fade %v max %v ratio %f\n", practice.Practice.Type, practice.Fade, practice.Max, practice.Ratio)
 		var what string
 		if reviewFuncs[practice.Practice.Type](words[practice.Practice.Text]) {
 			what = "ok"
