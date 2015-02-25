@@ -242,7 +242,7 @@ func main() {
 		}
 		ratio := float64(fade) / float64(max+1)
 		// filter
-		if fade < max {
+		if ratio < 2.0 {
 			continue
 		}
 		if fade < time.Second*30 { // skip newly added
