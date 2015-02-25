@@ -32,6 +32,15 @@ func init() {
 }
 
 func main() {
+	/*
+		traceFile, err := os.Create("trace")
+		checkErr("create trace file", err)
+		defer traceFile.Close()
+		err = pprof.StartTrace(traceFile)
+		checkErr("start trace", err)
+		defer pprof.StopTrace()
+	*/
+
 	dir := "."
 	if args := flag.Args(); len(args) > 0 {
 		dir = args[0]
@@ -218,7 +227,6 @@ func main() {
 		Ratio    float64
 	}
 	practices := []PracticeInfo{}
-	practicedWords := map[string]struct{}{}
 	for practice, history := range data.History {
 		// calculate fade and max
 		last := history[len(history)-1]
@@ -240,10 +248,6 @@ func main() {
 		if fade < time.Second*30 { // skip newly added
 			continue
 		}
-		if _, ok := practicedWords[practice.Text]; ok {
-			continue
-		}
-		practicedWords[practice.Text] = struct{}{}
 		// collect
 		practices = append(practices, PracticeInfo{
 			Practice: practice,
@@ -255,10 +259,25 @@ func main() {
 	pt("%d practices\n", len(practices))
 
 	// sort
+	for i := len(practices) - 1; i >= 1; i-- {
+		j := rand.Intn(i + 1)
+		practices[i], practices[j] = practices[j], practices[i]
+	}
 	Sort(practices, func(left, right PracticeInfo) bool {
 		return left.Ratio > right.Ratio
-		//return left.Fade > right.Fade
 	})
+
+	// unique words
+	practicedWords := map[string]struct{}{}
+	infos := []PracticeInfo{}
+	for _, info := range practices {
+		if _, ok := practicedWords[info.Practice.Text]; ok {
+			continue
+		}
+		infos = append(infos, info)
+		practicedWords[info.Practice.Text] = struct{}{}
+	}
+	practices = infos
 
 	// practice
 	for _, practice := range practices {
