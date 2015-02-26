@@ -10,7 +10,6 @@ import (
 	"math/rand"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -263,9 +262,11 @@ func main() {
 		j := rand.Intn(i + 1)
 		practices[i], practices[j] = practices[j], practices[i]
 	}
-	Sort(practices, func(left, right PracticeInfo) bool {
-		return left.Ratio > right.Ratio
-	})
+	sort.Sort(Sorter(len(practices), func(i, j int) bool {
+		return practices[i].Ratio > practices[j].Ratio
+	}, func(i, j int) {
+		practices[i], practices[j] = practices[j], practices[i]
+	}))
 
 	// unique words
 	practicedWords := map[string]struct{}{}
@@ -302,27 +303,28 @@ func checkErr(desc string, err error) {
 	}
 }
 
-func Sort(slice interface{}, cmp interface{}) {
-	sort.Sort(sliceSorter{reflect.ValueOf(slice), reflect.ValueOf(cmp)})
+type sorter struct {
+	length int
+	less   func(i, j int) bool
+	swap   func(i, j int)
 }
 
-type sliceSorter struct {
-	slice, cmp reflect.Value
+func Sorter(length int, less func(i, j int) bool, swap func(i, j int)) sorter {
+	return sorter{
+		length: length,
+		less:   less,
+		swap:   swap,
+	}
 }
 
-func (t sliceSorter) Len() int {
-	return t.slice.Len()
+func (s sorter) Len() int {
+	return s.length
 }
 
-func (t sliceSorter) Less(i, j int) bool {
-	return t.cmp.Call([]reflect.Value{
-		t.slice.Index(i),
-		t.slice.Index(j),
-	})[0].Bool()
+func (s sorter) Less(i, j int) bool {
+	return s.less(i, j)
 }
 
-func (t sliceSorter) Swap(i, j int) {
-	tmp := t.slice.Index(i).Interface()
-	t.slice.Index(i).Set(t.slice.Index(j))
-	t.slice.Index(j).Set(reflect.ValueOf(tmp))
+func (s sorter) Swap(i, j int) {
+	s.swap(i, j)
 }
