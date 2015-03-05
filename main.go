@@ -83,10 +83,6 @@ func main() {
 		Time time.Time
 		What string
 	}
-	type Practice struct {
-		Type string
-		Text string
-	}
 	data := struct {
 		History map[Practice][]HistoryEntry
 	}{
@@ -219,12 +215,6 @@ func main() {
 		"usage": usageReview,
 	}
 
-	type PracticeInfo struct {
-		Practice Practice
-		Max      time.Duration
-		Fade     time.Duration
-		Ratio    float64
-	}
 	practices := []PracticeInfo{}
 	for practice, history := range data.History {
 		// calculate fade and max
@@ -262,11 +252,9 @@ func main() {
 		j := rand.Intn(i + 1)
 		practices[i], practices[j] = practices[j], practices[i]
 	}
-	sort.Sort(Sorter(len(practices), func(i, j int) bool {
-		return practices[i].Ratio > practices[j].Ratio
-	}, func(i, j int) {
-		practices[i], practices[j] = practices[j], practices[i]
-	}))
+	sort.Sort(PracticeInfoSorter{practices, func(a, b PracticeInfo) bool {
+		return a.Ratio > b.Ratio
+	}})
 
 	// unique words
 	practicedWords := map[string]struct{}{}
@@ -303,28 +291,31 @@ func checkErr(desc string, err error) {
 	}
 }
 
-type sorter struct {
-	length int
-	less   func(i, j int) bool
-	swap   func(i, j int)
+type Practice struct {
+	Type string
+	Text string
 }
 
-func Sorter(length int, less func(i, j int) bool, swap func(i, j int)) sorter {
-	return sorter{
-		length: length,
-		less:   less,
-		swap:   swap,
-	}
+type PracticeInfo struct {
+	Practice Practice
+	Max      time.Duration
+	Fade     time.Duration
+	Ratio    float64
 }
 
-func (s sorter) Len() int {
-	return s.length
+type PracticeInfoSorter struct {
+	Slice []PracticeInfo
+	Cmp   func(a, b PracticeInfo) bool
 }
 
-func (s sorter) Less(i, j int) bool {
-	return s.less(i, j)
+func (s PracticeInfoSorter) Len() int {
+	return len(s.Slice)
 }
 
-func (s sorter) Swap(i, j int) {
-	s.swap(i, j)
+func (s PracticeInfoSorter) Less(i, j int) bool {
+	return s.Cmp(s.Slice[i], s.Slice[j])
+}
+
+func (s PracticeInfoSorter) Swap(i, j int) {
+	s.Slice[i], s.Slice[j] = s.Slice[j], s.Slice[i]
 }
