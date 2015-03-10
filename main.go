@@ -1,6 +1,5 @@
 package main
 
-//go:generate myccg -output sort.go sorter PracticeInfo PracticeInfoSorter
 //go:generate myccg -output slice_utils.go slice PracticeInfo PracticeInfos
 
 import (
