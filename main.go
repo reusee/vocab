@@ -1,6 +1,7 @@
 package main
 
 //go:generate myccg -output sort.go sorter PracticeInfo PracticeInfoSorter
+//go:generate myccg -output slice_utils.go slice PracticeInfo PracticeInfos
 
 import (
 	crand "crypto/rand"
@@ -12,7 +13,6 @@ import (
 	"math/rand"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -217,7 +217,7 @@ func main() {
 		"usage": usageReview,
 	}
 
-	practices := []PracticeInfo{}
+	var practices PracticeInfos
 	for practice, history := range data.History {
 		// calculate fade and max
 		last := history[len(history)-1]
@@ -250,25 +250,20 @@ func main() {
 	pt("%d practices\n", len(practices))
 
 	// sort
-	for i := len(practices) - 1; i >= 1; i-- {
-		j := rand.Intn(i + 1)
-		practices[i], practices[j] = practices[j], practices[i]
-	}
-	sort.Sort(PracticeInfoSorter{practices, func(a, b PracticeInfo) bool {
+	practices.Shuffle()
+	practices.Sort(func(a, b PracticeInfo) bool {
 		return a.Ratio > b.Ratio
-	}})
+	})
 
 	// unique words
 	practicedWords := map[string]struct{}{}
-	infos := []PracticeInfo{}
-	for _, info := range practices {
+	practices = practices.Filter(func(info PracticeInfo) bool {
 		if _, ok := practicedWords[info.Practice.Text]; ok {
-			continue
+			return false
 		}
-		infos = append(infos, info)
 		practicedWords[info.Practice.Text] = struct{}{}
-	}
-	practices = infos
+		return true
+	})
 
 	// practice
 	for _, practice := range practices {
