@@ -7,13 +7,19 @@ import (
 	"sort"
 )
 
+type PracticeInfos []PracticeInfo
+
+type sliceSorter struct {
+	l    int
+	less func(i, j int) bool
+	swap func(i, j int)
+}
+
 func init() {
 	var seed int64
 	binary.Read(crand.Reader, binary.LittleEndian, &seed)
 	rand.Seed(seed)
 }
-
-type PracticeInfos []PracticeInfo
 
 func (s PracticeInfos) Reduce(initial interface{}, fn func(value interface{}, elem PracticeInfo) interface{}) (ret interface{}) {
 	ret = initial
@@ -77,12 +83,6 @@ func (s PracticeInfos) Sort(cmp func(a, b PracticeInfo) bool) {
 			s[i], s[j] = s[j], s[i]
 		},
 	})
-}
-
-type sliceSorter struct {
-	l    int
-	less func(i, j int) bool
-	swap func(i, j int)
 }
 
 func (t sliceSorter) Len() int {
