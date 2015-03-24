@@ -1,6 +1,6 @@
 package main
 
-//go:generate myccg -output slice_utils.go slice PracticeInfo PracticeInfos
+//go:generate myccg -o slice_utils.go slice PracticeInfo PracticeInfos
 
 import (
 	crand "crypto/rand"
